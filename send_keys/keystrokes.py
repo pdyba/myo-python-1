@@ -282,9 +282,11 @@ def alt_tab():
     release_key(VK_ALT)
 
 def start_move():
-    tap_key(VK_ALT)   
-    tap_key(VK_SPACE)
+    press_key(VK_ALT)   
+    press_key(VK_SPACE)
     #tap_key(VK_KEY_R)
+    #release_key(VK_SPACE)
+    #release_key(VK_ALT)
     #release_key(VK_SPACE)
 #     release_key(VK_LMENU)
 # 
