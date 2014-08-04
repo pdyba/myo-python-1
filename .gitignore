@@ -13,3 +13,4 @@ myo/dist/
 *.app
 .project
 .pydevproject
+.settings/
