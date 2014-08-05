@@ -20,7 +20,7 @@ from myo.six import print_
 class Listener(myo.DeviceListener):
 
     def on_pair(self, myo, timestamp):
-        print_("Hello Myo", myo.mac_address)
+        print_("Hello Myo")
         myo.request_rssi()
 
     def on_rssi(self, myo, timestamp, rssi):
@@ -29,9 +29,7 @@ class Listener(myo.DeviceListener):
 
 def main():
     hub = myo.Hub()
-    hub.async_until_stopped(1000, Listener())
-    hub.pair_any()
-    hub.join()
+    hub.run(1000, Listener())
 
 if __name__ == '__main__':
     main()
