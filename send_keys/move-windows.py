@@ -6,6 +6,7 @@ import sys
 from myo.lowlevel import pose_t
 myo.init()
 from myo.six import print_
+from send_keys.keystrokes import *
 
 class Listener(myo.DeviceListener):
 
@@ -32,15 +33,17 @@ class Listener(myo.DeviceListener):
 
     def on_pose(self, myo, timestamp, pose):
         print 'on_pose', pose
-        tap_key(VK_SPACE)
+        #tap_key(VK_SPACE)
         if pose == pose_t.fist:
-            start_move()
+            pass
         elif pose == pose_t.wave_out:
-            tap_key(9)
+            pass
         elif pose == pose_t.wave_in:
-            alt_tab()
+            pass
 
     def on_orientation_data(self, myo, timestamp, orientation):
+        x,y,z,w = orientation
+        print zip('xyzw', orientation)
         pass
 
     def on_accelerometor_data(self, myo, timestamp, acceleration):
@@ -53,6 +56,7 @@ def main():
     try:
         hub = myo.Hub()
         hub.run(1000, Listener())
+        print "Running..."
     except:
         sys.stderr.write('Make sure that Myo Connect is running and a Myo is paired.\n')
         raise
