@@ -13,6 +13,7 @@ import logging
 import numpy as np
 from sklearn import hmm
 from random import Random
+from collections import Counter, defaultdict
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,7 +28,6 @@ states = [pose for pose in pose_t]
 # [<pose_t: [0] rest>, <pose_t: [1] fist>, <pose_t: [2] wave_in>, <pose_t: [3] wave_out>, <pose_t: [4] fingers_spread>, <pose_t: [5] reserved1>, <pose_t: [6] thumb_to_pinky>]
 states.append('new')
 n_states = len(states)
-from collections import Counter
 
 class Datum():
     def __init__(self, action, dtype=None):
@@ -105,22 +105,31 @@ def chunks(data, chunk_size):
     for i in xrange(0, len(data), chunk_size):
         yield data[i:i + chunk_size]
 
+def get_distribution(states, ranges_in_states):
+    counter = Counter()
+    for new_pose_index_start, new_pose_index_end in ranges_in_states:
+        counter.update(states[new_pose_index_start:new_pose_index_end])
+    size = sum(counter.values())
+    return dict((state, count * 1.0 / size) for state, count in counter.items())
+
 def train_pose():
     global is_collecting_new_pose
     is_collecting_new_pose = True
     new_poses_ranges = []
+    countdown('do regular stuff and not your pose.')
     for _ in xrange(2):
-        countdown('do regular stuff and not your pose.')
         sleep(2)
         countdown('do your pose.')
         new_pose_index_start = len(new_pose_data) - 1
         sleep(1)
         new_pose_index_end = len(new_pose_data)
         new_poses_ranges.append((new_pose_index_start, new_pose_index_end))
+        print "Do regular stuff again."
+    print "Done training."
     is_collecting_new_pose = False
-    logging.info('new_pose_data:\n%s', new_pose_data)
+    logging.debug('new_pose_data:\n%s', new_pose_data)
     X = np.array(new_pose_data)
-    logging.info('X:\n%s', X)
+    logging.debug('X:\n%s', X)
     global model
     model = hmm.GaussianHMM(n_states, "full")
     print model.fit([X])
@@ -132,11 +141,17 @@ def train_pose():
 
     # TODO keep track of regular states distribution
 
-    # Keep track of new pose states distribution
-    new_pose_states = Counter()
-    for new_pose_index_start, new_pose_index_end in new_poses_ranges:
-        new_pose_states.update(predictions[new_pose_index_start:new_pose_index_end])
-    # TODO make state distribution from new_pose_states
+    global new_pose_states_dist
+    new_pose_states_dist = get_distribution(predictions, new_poses_ranges)
+    logging.info('new_pose_states_dist: %s', new_pose_states_dist)
+
+def similarity(dict1, dict2):
+    if len(dict1) > len(dict2):
+        dict1, dict2 = dict2, dict1
+    result = 0
+    for k, v in dict1.iteritems():
+        result += dict2.get(k, 0) * v
+    return result
 
 def detect_pose():
     while True:
@@ -151,9 +166,11 @@ def detect_pose():
         predictions_set = set(predictions)
         logging.info("Set of predictions:\n%s", predictions_set)
         logging.info("Num distinct predictions:\n%s", len(predictions_set))
-        #print "score", model.score(X)
-        #print "eval", model.eval(X)
-        # TODO do cosine similarity of new_pose_states
+        # print "score", model.score(X)
+        # print "eval", model.eval(X)
+        dist = get_distribution(predictions, [(0, len(predictions))])
+        new_pose_score = similarity(dist, new_pose_states_dist)
+        print 'new pose score:', new_pose_score
 
 def main():
     try:
@@ -163,7 +180,7 @@ def main():
         training_thread = Thread(target=train_pose)
         training_thread.start()
         training_thread.join()
-        print "Done Training."
+        print "Done Training Thread."
         training_thread = Thread(target=detect_pose)
         training_thread.start()
     except:
