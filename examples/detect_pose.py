@@ -5,6 +5,7 @@ import myo
 import sys
 from myo.lowlevel import pose_t
 from time import sleep
+from numpy import dtype
 myo.init()
 from myo.six import print_
 from sklearn import svm
@@ -29,9 +30,11 @@ states = [pose for pose in pose_t]
 states.append('new')
 n_states = len(states)
 
+NUM_FEATURES = 1 + 4 + 3 + 3
+
 class Datum():
     def __init__(self, action, dtype=None):
-        self._array = [0 for _ in xrange(1 + 4 + 3 + 3)]
+        self._array = [0 for _ in xrange(NUM_FEATURES)]
         if type(action) == pose_t or dtype == pose_t:
             self._array[0] = action.value
         elif dtype == 'ori':
@@ -117,7 +120,7 @@ def train_pose():
     is_collecting_new_pose = True
     new_poses_ranges = []
     countdown('do regular stuff and not your pose.')
-    for _ in xrange(2):
+    for _ in xrange(1):
         sleep(2)
         countdown('do your pose.')
         new_pose_index_start = len(new_pose_data) - 1
@@ -130,8 +133,17 @@ def train_pose():
     logging.debug('new_pose_data:\n%s', new_pose_data)
     X = np.array(new_pose_data)
     logging.debug('X:\n%s', X)
+    print 'number of Observations:', len(X)
     global model
-    model = hmm.GaussianHMM(n_states, "full")
+    startprob = np.zeros(n_states)
+    startprob[0] = 1
+    transmat = hmm.normalize(np.random.rand(n_states, n_states), axis=1)
+    model = hmm.GaussianHMM(n_components=n_states,
+                            covariance_type="full",
+                            startprob=startprob,
+                            transmat=transmat)
+    model.means_ = np.zeros((n_states,NUM_FEATURES))
+    model.covars_ = np.tile(np.identity(NUM_FEATURES), (n_states, 1, 1))
     print model.fit([X])
     predictions = model.predict(X) 
     logging.info("Predictions:\n%s", list(predictions))
@@ -161,7 +173,7 @@ def detect_pose():
         sleep(1)
         is_collecting_new_pose = False
         X = np.array(new_pose_data)
-        predictions = model.predict(X) 
+        predictions = model.predict(X)
         logging.info("Predictions:\n%s", list(predictions))
         predictions_set = set(predictions)
         logging.info("Set of predictions:\n%s", predictions_set)
@@ -177,11 +189,11 @@ def main():
         hub = myo.Hub()
         hub.run(1000, Listener())
         print "Running..."
-        training_thread = Thread(target=train_pose)
+        training_thread = Thread(target=train_pose, name='Training_Thread')
         training_thread.start()
         training_thread.join()
         print "Done Training Thread."
-        training_thread = Thread(target=detect_pose)
+        training_thread = Thread(target=detect_pose, name='Detecting_Thread')
         training_thread.start()
     except:
         sys.stderr.write('Make sure that Myo Connect is running and a Myo is paired.\n')
