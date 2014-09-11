@@ -294,4 +294,5 @@ def start_move():
 #     tap_key(VK_KEY_M)
 #     release_key(VK_LMENU)
 
-start_move()
+if __name__ == '__main__':
+    start_move()
