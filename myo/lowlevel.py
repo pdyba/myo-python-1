@@ -102,7 +102,7 @@ def init(dist_path=None, add_to_path=True):
     elif platform == 'Darwin':
         # lib name is just 'myo' as per:
         # https://developer.thalmic.com/forums/topic/541/?page=2
-        lib_name = 'myo'
+        lib_name = 'myo' # use absolut path ex. '/Library/frameworks/myo.framework/myo'
     else:
         raise EnvironmentError('unsupported platform %s' % platform)
 
